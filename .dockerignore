@@ -1,0 +1,6 @@
+.env
+logs/
+workspace/
+.git/
+.gitignore
+README.md

@@ -1,0 +1,38 @@
+services:
+  claude-cron:
+    build:
+      context: .
+      args:
+        CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-latest}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: claude-cron:local
+    container_name: claude-cron
+    restart: unless-stopped
+    env_file:
+      - .env
+
+    # Needed so the first `docker compose up` (attached) can show the login
+    # prompt, and so `docker compose exec -it ... claude-login` works later.
+    stdin_open: true
+    tty: true
+
+    volumes:
+      # Persisted Claude state -- survives restarts and image rebuilds.
+      # The whole home, because credentials live in ~/.claude/.credentials.json
+      # while account + onboarding state lives in ~/.claude.json, one level up.
+      - claude-home:/home/claude
+      # What the scheduled prompt can read and write.
+      - ./workspace:/workspace
+      # Job output, one file per day.
+      - ./logs:/var/log/claude-cron
+
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep cron > /dev/null || exit 1"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  claude-home:
